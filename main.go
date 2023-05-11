@@ -19,15 +19,15 @@ type Client struct {
 	First_Name  string `json:"firstname"`
 	Middle_Name string `json:"middlename"`
 	Sur_Name    string `json:"surname"`
-	Birthdate   int16  `json:"birthdate"`
+	Birthdate   string `json:"birthdate"`
 	Gender      string `json:"gender"`
 	Address     string `json:"address"`
 	Primary     string `json:"primary "`
-	LoanAmount  int16  `json:"loanAmount"`
-	LoanDays    int16  `json:"loanDays"`
-	Interest    int16  `json:"interest"`
-	TotalAmount int16  `json:"totalAmount"`
-	Purpose     string `json:"porpose"`
+	LoanAmount  int    `json:"loanAmount"`
+	LoanDays    int    `json:"loanDays"`
+	Interest    int    `json:"interest"`
+	TotalAmount int    `json:"totalAmount"`
+	Purpose     string `json:"purpose"`
 }
 
 type User struct {
@@ -51,7 +51,7 @@ func (r *Repository) CreateUser(context *fiber.Ctx) error {
 		return err
 	}
 
-	err = r.DB.Create(&user).Error
+	err = r.DB.Table("user").Create(&user).Error
 	if err != nil {
 		context.Status(http.StatusBadRequest).JSON(
 			&fiber.Map{"message": "could not create user"})
@@ -73,7 +73,7 @@ func (r *Repository) DeleteUser(context *fiber.Ctx) error {
 		return nil
 	}
 
-	err := r.DB.Delete(userModel, id)
+	err := r.DB.Table("user").Delete(userModel, id)
 
 	if err.Error != nil {
 		context.Status(http.StatusBadRequest).JSON(&fiber.Map{
@@ -90,7 +90,7 @@ func (r *Repository) DeleteUser(context *fiber.Ctx) error {
 func (r *Repository) GetUser(context *fiber.Ctx) error {
 	userModel := &[]models.User{}
 
-	err := r.DB.Find(userModel).Error
+	err := r.DB.Table("user").Find(userModel).Error
 	if err != nil {
 		context.Status(http.StatusBadRequest).JSON(&fiber.Map{
 			"message": "could not get user data",
@@ -115,7 +115,7 @@ func (r *Repository) GetUserByID(context *fiber.Ctx) error {
 
 	fmt.Println("the ID is", id)
 
-	err := r.DB.Where("id = ?", id).First(userModel).Error
+	err := r.DB.Table("user").Where("id = ?", id).First(userModel).Error
 	if err != nil {
 		context.Status(http.StatusBadRequest).JSON(&fiber.Map{
 			"message": "could not get user",
@@ -139,7 +139,7 @@ func (r *Repository) CreateClient(context *fiber.Ctx) error {
 		return err
 	}
 
-	err = r.DB.Create(&client).Error
+	err = r.DB.Debug().Table("client").Omit("First_Name", "Middle_Name", "Sur_name", "Birthdate", "Gender", "Address", "Primary", "LoanAmount", "LoanDays", "Interest", "TotalAmount", "Purpose").Create(&client).Error
 	if err != nil {
 		context.Status(http.StatusBadRequest).JSON(
 			&fiber.Map{"message": "could not create client"})
@@ -152,7 +152,7 @@ func (r *Repository) CreateClient(context *fiber.Ctx) error {
 func (r *Repository) GetClient(context *fiber.Ctx) error {
 	clientModel := &[]models.Client{}
 
-	err := r.DB.Find(clientModel).Error
+	err := r.DB.Table("client").Find(clientModel).Error
 	if err != nil {
 		context.Status(http.StatusBadRequest).JSON(&fiber.Map{
 			"message": "could not get user data",
@@ -172,7 +172,7 @@ func (r *Repository) SetupRoutes(app *fiber.App) {
 	api.Get("/get_user/:id", r.GetUserByID)
 	api.Get("/user", r.GetUser)
 	api.Post("/create_client", r.CreateClient)
-	api.Get("/client", r.GetClient)
+	api.Get("/get_client", r.GetClient)
 
 }
 
