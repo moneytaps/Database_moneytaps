@@ -15,25 +15,25 @@ import (
 	"gorm.io/gorm"
 )
 
-type Client struct {
-	First_Name  string `json:"firstname"`
-	Middle_Name string `json:"middlename"`
-	Sur_Name    string `json:"surname"`
-	Birthdate   string `json:"birthdate"`
-	Gender      string `json:"gender"`
-	Address     string `json:"address"`
-	Primary     string `json:"primary "`
-	LoanAmount  int    `json:"loanAmount"`
-	LoanDays    int    `json:"loanDays"`
-	Interest    int    `json:"interest"`
-	TotalAmount int    `json:"totalAmount"`
-	Purpose     string `json:"purpose"`
-}
-
 type User struct {
 	Email    *string `json:"email"`
 	Password *string `json:"password"`
 	Contact  *string `json:"contact"`
+}
+
+type Client struct {
+	FirstName   string `json:"first_name"`
+	MiddleName  string `json:"middle_name"`
+	SurName     string `json:"sur_name"`
+	Birth       string `json:"birth"`
+	Gender      string `json:"gender"`
+	Address     string `json:"address"`
+	Primary     string `json:"primary"`
+	LoanAmount  int    `json:"loanAmount"`
+	Days        int    `json:"days"`
+	Interest    int    `json:"interest"`
+	TotalAmount int    `json:"totalAmount"`
+	Purpose     string `json:"purpose"`
 }
 
 type Repository struct {
@@ -51,7 +51,7 @@ func (r *Repository) CreateUser(context *fiber.Ctx) error {
 		return err
 	}
 
-	err = r.DB.Table("user").Create(&user).Error
+	err = r.DB.Table("user").Omit("Email", "Password", "Contact").Create(&user).Error
 	if err != nil {
 		context.Status(http.StatusBadRequest).JSON(
 			&fiber.Map{"message": "could not create user"})
@@ -73,7 +73,7 @@ func (r *Repository) DeleteUser(context *fiber.Ctx) error {
 		return nil
 	}
 
-	err := r.DB.Table("user").Delete(userModel, id)
+	err := r.DB.Table("user").Omit("Email", "Password", "Contact").Delete(userModel, id)
 
 	if err.Error != nil {
 		context.Status(http.StatusBadRequest).JSON(&fiber.Map{
@@ -90,7 +90,7 @@ func (r *Repository) DeleteUser(context *fiber.Ctx) error {
 func (r *Repository) GetUser(context *fiber.Ctx) error {
 	userModel := &[]models.User{}
 
-	err := r.DB.Table("user").Find(userModel).Error
+	err := r.DB.Table("user").Omit("Email", "Password", "Contact").Find(userModel).Error
 	if err != nil {
 		context.Status(http.StatusBadRequest).JSON(&fiber.Map{
 			"message": "could not get user data",
@@ -115,7 +115,7 @@ func (r *Repository) GetUserByID(context *fiber.Ctx) error {
 
 	fmt.Println("the ID is", id)
 
-	err := r.DB.Table("user").Where("id = ?", id).First(userModel).Error
+	err := r.DB.Table("user").Omit("Email", "Password", "Contact").Where("id = ?", id).First(userModel).Error
 	if err != nil {
 		context.Status(http.StatusBadRequest).JSON(&fiber.Map{
 			"message": "could not get user",
@@ -129,9 +129,10 @@ func (r *Repository) GetUserByID(context *fiber.Ctx) error {
 	return nil
 }
 func (r *Repository) CreateClient(context *fiber.Ctx) error {
-	client := Client{}
+	clients := Client{}
 
-	err := context.BodyParser(&client)
+	err := context.BodyParser(&clients)
+	fmt.Println(clients)
 
 	if err != nil {
 		context.Status(http.StatusUnprocessableEntity).JSON(
@@ -139,7 +140,8 @@ func (r *Repository) CreateClient(context *fiber.Ctx) error {
 		return err
 	}
 
-	err = r.DB.Debug().Table("client").Omit("First_Name", "Middle_Name", "Sur_name", "Birthdate", "Gender", "Address", "Primary", "LoanAmount", "LoanDays", "Interest", "TotalAmount", "Purpose").Create(&client).Error
+	// err = r.DB.Debug().Table("client").Omit("FirstName", "MiddleName", "SurName", "Birth", "Gender", "Address", "Primary", "LoanAmount", "Days", "Interest", "TotalAmount", "Purpose").Create(&client).Error
+	err = r.DB.Create(&clients).Error // <- tanggalin mo na lang mamaya
 	if err != nil {
 		context.Status(http.StatusBadRequest).JSON(
 			&fiber.Map{"message": "could not create client"})
@@ -152,7 +154,10 @@ func (r *Repository) CreateClient(context *fiber.Ctx) error {
 func (r *Repository) GetClient(context *fiber.Ctx) error {
 	clientModel := &[]models.Client{}
 
-	err := r.DB.Table("client").Find(clientModel).Error
+	err := r.DB.Find(clientModel).Error
+
+	// err := r.DB.Table("client").Omit("client").Omit("FirstName", "MiddleName", "SurName", "Birth", "Gender", "Address", "Primary", "LoanAmount", "Days", "Interest", "TotalAmount", "Purpose").Find(clientModel).Error
+
 	if err != nil {
 		context.Status(http.StatusBadRequest).JSON(&fiber.Map{
 			"message": "could not get user data",
@@ -172,7 +177,7 @@ func (r *Repository) SetupRoutes(app *fiber.App) {
 	api.Get("/get_user/:id", r.GetUserByID)
 	api.Get("/user", r.GetUser)
 	api.Post("/create_client", r.CreateClient)
-	api.Get("/get_client", r.GetClient)
+	api.Get("/client", r.GetClient)
 
 }
 
