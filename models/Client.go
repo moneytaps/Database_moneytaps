@@ -11,10 +11,10 @@ type Client struct {
 	Gender      string `json:"gender"`
 	Address     string `json:"address"`
 	Primary     string `json:"primary"`
-	LoanAmount  int    `json:"loanAmount"`
+	LoanAmount  int    `json:"loan_amount"`
 	Days        int    `json:"days"`
 	Interest    int    `json:"interest"`
-	TotalAmount int    `json:"totalAmount"`
+	TotalAmount int    `json:"total_amount"`
 	Purpose     string `json:"purpose"`
 }
 

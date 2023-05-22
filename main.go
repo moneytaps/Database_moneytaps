@@ -19,6 +19,7 @@ type User struct {
 	Email    *string `json:"email"`
 	Password *string `json:"password"`
 	Contact  *string `json:"contact"`
+	Client   Client
 }
 
 type Client struct {
@@ -29,10 +30,10 @@ type Client struct {
 	Gender      string `json:"gender"`
 	Address     string `json:"address"`
 	Primary     string `json:"primary"`
-	LoanAmount  int    `json:"loanAmount"`
+	LoanAmount  int    `json:"loan_amount"`
 	Days        int    `json:"days"`
 	Interest    int    `json:"interest"`
-	TotalAmount int    `json:"totalAmount"`
+	TotalAmount int    `json:"total_amount"`
 	Purpose     string `json:"purpose"`
 }
 
@@ -41,9 +42,9 @@ type Repository struct {
 }
 
 func (r *Repository) CreateUser(context *fiber.Ctx) error {
-	user := User{}
+	users := User{}
 
-	err := context.BodyParser(&user)
+	err := context.BodyParser(&users)
 
 	if err != nil {
 		context.Status(http.StatusUnprocessableEntity).JSON(
@@ -51,7 +52,7 @@ func (r *Repository) CreateUser(context *fiber.Ctx) error {
 		return err
 	}
 
-	err = r.DB.Table("user").Omit("Email", "Password", "Contact").Create(&user).Error
+	err = r.DB.Create(&users).Error
 	if err != nil {
 		context.Status(http.StatusBadRequest).JSON(
 			&fiber.Map{"message": "could not create user"})
@@ -59,6 +60,27 @@ func (r *Repository) CreateUser(context *fiber.Ctx) error {
 	}
 
 	context.Status(http.StatusOK).JSON(&fiber.Map{"message": "user has been added"})
+	return nil
+}
+func (r *Repository) PostUser(context *fiber.Ctx) error {
+	users := User{}
+
+	err := context.BodyParser(&users)
+	if err != nil {
+		context.Status(http.StatusUnprocessableEntity).JSON(
+			&fiber.Map{"message": "request failed"})
+		return err
+	}
+
+	// Find user by email and password
+	err = r.DB.Debug().Where("email = ? AND password = ?", users.Email, users.Password).Find(&users).Error
+	if err != nil {
+		context.Status(http.StatusBadRequest).JSON(
+			&fiber.Map{"message": "user cannot login"})
+		return nil
+	}
+
+	context.Status(http.StatusOK).JSON(&fiber.Map{"message": "user has logged in"})
 	return nil
 }
 
@@ -73,7 +95,7 @@ func (r *Repository) DeleteUser(context *fiber.Ctx) error {
 		return nil
 	}
 
-	err := r.DB.Table("user").Omit("Email", "Password", "Contact").Delete(userModel, id)
+	err := r.DB.Delete(userModel, id)
 
 	if err.Error != nil {
 		context.Status(http.StatusBadRequest).JSON(&fiber.Map{
@@ -90,7 +112,7 @@ func (r *Repository) DeleteUser(context *fiber.Ctx) error {
 func (r *Repository) GetUser(context *fiber.Ctx) error {
 	userModel := &[]models.User{}
 
-	err := r.DB.Table("user").Omit("Email", "Password", "Contact").Find(userModel).Error
+	err := r.DB.Find(userModel).Error
 	if err != nil {
 		context.Status(http.StatusBadRequest).JSON(&fiber.Map{
 			"message": "could not get user data",
@@ -115,7 +137,7 @@ func (r *Repository) GetUserByID(context *fiber.Ctx) error {
 
 	fmt.Println("the ID is", id)
 
-	err := r.DB.Table("user").Omit("Email", "Password", "Contact").Where("id = ?", id).First(userModel).Error
+	err := r.DB.Where("id = ?", id).First(userModel).Error
 	if err != nil {
 		context.Status(http.StatusBadRequest).JSON(&fiber.Map{
 			"message": "could not get user",
@@ -141,7 +163,7 @@ func (r *Repository) CreateClient(context *fiber.Ctx) error {
 	}
 
 	// err = r.DB.Debug().Table("client").Omit("FirstName", "MiddleName", "SurName", "Birth", "Gender", "Address", "Primary", "LoanAmount", "Days", "Interest", "TotalAmount", "Purpose").Create(&client).Error
-	err = r.DB.Create(&clients).Error // <- tanggalin mo na lang mamaya
+	err = r.DB.Create(&clients).Error // <- tanggalin mo na lan
 	if err != nil {
 		context.Status(http.StatusBadRequest).JSON(
 			&fiber.Map{"message": "could not create client"})
@@ -173,12 +195,12 @@ func (r *Repository) GetClient(context *fiber.Ctx) error {
 func (r *Repository) SetupRoutes(app *fiber.App) {
 	api := app.Group("/api")
 	api.Post("/create_user", r.CreateUser)
+	api.Post("/user/login", r.PostUser) // Updated route for user login
 	api.Delete("delete_user/:id", r.DeleteUser)
 	api.Get("/get_user/:id", r.GetUserByID)
 	api.Get("/user", r.GetUser)
 	api.Post("/create_client", r.CreateClient)
 	api.Get("/client", r.GetClient)
-
 }
 
 func main() {
