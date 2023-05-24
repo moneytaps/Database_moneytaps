@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
 
@@ -19,7 +20,6 @@ type User struct {
 	Email    *string `json:"email"`
 	Password *string `json:"password"`
 	Contact  *string `json:"contact"`
-	Client   Client
 }
 
 type Client struct {
@@ -41,10 +41,10 @@ type Repository struct {
 	DB *gorm.DB
 }
 
-func (r *Repository) CreateUser(context *fiber.Ctx) error {
-	users := User{}
+func (r *Repository) Register(context *fiber.Ctx) error {
+	user := User{}
 
-	err := context.BodyParser(&users)
+	err := context.BodyParser(&user)
 
 	if err != nil {
 		context.Status(http.StatusUnprocessableEntity).JSON(
@@ -52,35 +52,70 @@ func (r *Repository) CreateUser(context *fiber.Ctx) error {
 		return err
 	}
 
-	err = r.DB.Create(&users).Error
+	err = r.DB.Create(&user).Error
 	if err != nil {
 		context.Status(http.StatusBadRequest).JSON(
-			&fiber.Map{"message": "could not create user"})
-		return nil
+			&fiber.Map{"message": "could not register the user"})
 	}
 
-	context.Status(http.StatusOK).JSON(&fiber.Map{"message": "user has been added"})
+	context.Status(http.StatusOK).JSON(&fiber.Map{
+		"message": "Successfully Registered",
+	})
 	return nil
 }
-func (r *Repository) PostUser(context *fiber.Ctx) error {
-	users := User{}
 
-	err := context.BodyParser(&users)
+func GenerateJWT(userID uint) (string, error) {
+	// Define the claims for the JWT
+	claims := jwt.MapClaims{
+		"user_id": userID,
+		// Add other desired claims...
+	}
+
+	// Create a new JWT token
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	// Generate the token string
+	jwtSecret := []byte("your_secret_key") // Replace with your secret key
+	tokenString, err := token.SignedString(jwtSecret)
+	if err != nil {
+		return "", err
+	}
+
+	return tokenString, nil
+}
+func (r *Repository) Login(context *fiber.Ctx) error {
+	user := User{}
+
+	err := context.BodyParser(&user)
 	if err != nil {
 		context.Status(http.StatusUnprocessableEntity).JSON(
 			&fiber.Map{"message": "request failed"})
 		return err
 	}
 
-	// Find user by email and password
-	err = r.DB.Debug().Where("email = ? AND password = ?", users.Email, users.Password).Find(&users).Error
+	// Perform authentication logic
+	// Example:
+	userModel := &models.User{}
+	err = r.DB.Where("email = ? AND password = ?", user.Email, user.Password).First(userModel).Error
 	if err != nil {
-		context.Status(http.StatusBadRequest).JSON(
-			&fiber.Map{"message": "user cannot login"})
-		return nil
+		context.Status(http.StatusUnauthorized).JSON(
+			&fiber.Map{"message": "invalid email or password"})
+		return err
 	}
 
-	context.Status(http.StatusOK).JSON(&fiber.Map{"message": "user has logged in"})
+	// Assuming authentication is successful, generate a token
+	// Example:
+	token, err := GenerateJWT(userModel.ID)
+	if err != nil {
+		context.Status(http.StatusInternalServerError).JSON(
+			&fiber.Map{"message": "failed to generate token"})
+		return err
+	}
+
+	context.Status(http.StatusOK).JSON(&fiber.Map{
+		"message": "login successful",
+		"token":   token,
+	})
 	return nil
 }
 
@@ -194,8 +229,8 @@ func (r *Repository) GetClient(context *fiber.Ctx) error {
 
 func (r *Repository) SetupRoutes(app *fiber.App) {
 	api := app.Group("/api")
-	api.Post("/create_user", r.CreateUser)
-	api.Post("/user/login", r.PostUser) // Updated route for user login
+	api.Post("/create_user", r.Register)
+	api.Post("/user/login", r.Login) // Updated route for user login
 	api.Delete("delete_user/:id", r.DeleteUser)
 	api.Get("/get_user/:id", r.GetUserByID)
 	api.Get("/user", r.GetUser)
