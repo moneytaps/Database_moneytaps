@@ -16,6 +16,7 @@ type Client struct {
 	Interest    int    `json:"interest"`
 	TotalAmount int    `json:"total_amount"`
 	Purpose     string `json:"purpose"`
+	
 }
 
 func Migrateclient(db *gorm.DB) error {

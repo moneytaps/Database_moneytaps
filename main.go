@@ -1,8 +1,8 @@
 package main
 
 import (
-	"database/models"
-	"database/storage"
+	"DATABASE_MONEYTAPS/models"
+	"DATABASE_MONEYTAPS/storage"
 	"fmt"
 	"log"
 
@@ -16,33 +16,14 @@ import (
 	"gorm.io/gorm"
 )
 
-type User struct {
-	Email    *string `json:"email"`
-	Password *string `json:"password"`
-	Contact  *string `json:"contact"`
-}
 
-type Client struct {
-	FirstName   string `json:"first_name"`
-	MiddleName  string `json:"middle_name"`
-	SurName     string `json:"sur_name"`
-	Birth       string `json:"birth"`
-	Gender      string `json:"gender"`
-	Address     string `json:"address"`
-	Primary     string `json:"primary"`
-	LoanAmount  int    `json:"loan_amount"`
-	Days        int    `json:"days"`
-	Interest    int    `json:"interest"`
-	TotalAmount int    `json:"total_amount"`
-	Purpose     string `json:"purpose"`
-}
 
 type Repository struct {
 	DB *gorm.DB
 }
 
 func (r *Repository) Register(context *fiber.Ctx) error {
-	user := User{}
+	user := models.User{}
 
 	err := context.BodyParser(&user)
 
@@ -84,7 +65,7 @@ func GenerateJWT(userID uint) (string, error) {
 	return tokenString, nil
 }
 func (r *Repository) Login(context *fiber.Ctx) error {
-	user := User{}
+	user := models.User{}
 
 	err := context.BodyParser(&user)
 	if err != nil {
@@ -186,7 +167,7 @@ func (r *Repository) GetUserByID(context *fiber.Ctx) error {
 	return nil
 }
 func (r *Repository) CreateClient(context *fiber.Ctx) error {
-	clients := Client{}
+	clients := models.Client{}
 
 	err := context.BodyParser(&clients)
 	fmt.Println(clients)
