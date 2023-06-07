@@ -195,18 +195,19 @@ func (r *Repository) GetUserByID(context *fiber.Ctx) error {
 	return nil
 }
 func (r *Repository) CreateLoan(context *fiber.Ctx) error {
-	transactionStaus := models.LoanStatus{}
+	loan_statuses := models.LoanStatus{}
+	status := "0"
 
-	err := context.BodyParser(&transactionStaus)
-	fmt.Println(transactionStaus)
+	err := context.BodyParser(&loan_statuses)
+	fmt.Println(loan_statuses)
 
 	if err != nil {
 		context.Status(http.StatusUnprocessableEntity).JSON(
 			&fiber.Map{"message": "request failed"})
 		return err
 	}
-
-	err = r.DB.Create(&transactionStaus).Error
+	loan_statuses.Status = status
+	err = r.DB.Create(&loan_statuses).Error
 	if err != nil {
 		context.Status(http.StatusBadRequest).JSON(
 			&fiber.Map{"message": "could not create client"})
@@ -216,10 +217,11 @@ func (r *Repository) CreateLoan(context *fiber.Ctx) error {
 	context.Status(http.StatusOK).JSON(&fiber.Map{"message": "client has been added"})
 	return nil
 }
-func (r *Repository) GetAllLoan(context *fiber.Ctx) error {
-	Transaction_status := &[]models.LoanStatus{}
 
-	err := r.DB.Find(Transaction_status).Error
+func (r *Repository) GetAllLoan(context *fiber.Ctx) error {
+	loan_statuses := &[]models.LoanStatus{}
+
+	err := r.DB.Find(loan_statuses).Error
 
 	if err != nil {
 		context.Status(http.StatusBadRequest).JSON(&fiber.Map{
@@ -229,14 +231,14 @@ func (r *Repository) GetAllLoan(context *fiber.Ctx) error {
 	}
 
 	context.Status(http.StatusOK).JSON(
-		&fiber.Map{"message": "user successfully fetch", "data": Transaction_status})
+		&fiber.Map{"message": "user successfully fetch", "data": loan_statuses})
 	return nil
 }
 func (r *Repository) ApprovedLoan(context *fiber.Ctx) error {
-	Transaction_status := models.LoanStatus{}
+	loan_statuses := models.LoanStatus{}
 
-	err := context.BodyParser(&Transaction_status)
-	fmt.Println(Transaction_status)
+	err := context.BodyParser(&loan_statuses)
+	fmt.Println(loan_statuses)
 
 	if err != nil {
 		context.Status(http.StatusUnprocessableEntity).JSON(
@@ -244,14 +246,14 @@ func (r *Repository) ApprovedLoan(context *fiber.Ctx) error {
 		return err
 	}
 
-	err = r.DB.Create(&Transaction_status).Error
+	err = r.DB.Create(&loan_statuses).Error
 	if err != nil {
 		context.Status(http.StatusBadRequest).JSON(
-			&fiber.Map{"message": "could not create client"})
+			&fiber.Map{"message": "could not been approved"})
 		return nil
 	}
 
-	context.Status(http.StatusOK).JSON(&fiber.Map{"message": "client  has been added"})
+	context.Status(http.StatusOK).JSON(&fiber.Map{"message": "your load has been Approved"})
 	return nil
 }
 func (r *Repository) ClientHistory(context *fiber.Ctx) error {
@@ -276,6 +278,28 @@ func (r *Repository) ClientHistory(context *fiber.Ctx) error {
 	context.Status(http.StatusOK).JSON(&fiber.Map{"message": "history client has been added"})
 	return nil
 }
+func (r *Repository) DeleteLoanStatus(context *fiber.Ctx) error {
+	loanModel := models.LoanStatus{}
+	id := context.Params("id")
+	if id == "" {
+		context.Status(http.StatusInternalServerError).JSON(&fiber.Map{
+			"message": "id cannot be empty",
+		})
+		return nil
+	}
+	err := r.DB.Delete(loanModel, id)
+
+	if err.Error != nil {
+		context.Status(http.StatusBadRequest).JSON(&fiber.Map{
+			"message": "could not delete loan",
+		})
+		return err.Error
+	}
+	context.Status(http.StatusOK).JSON(&fiber.Map{
+		"message": "loan deleted successfully",
+	})
+	return nil
+}
 
 func (r *Repository) SetupRoutes(app *fiber.App) {
 	api := app.Group("/api")
@@ -285,7 +309,8 @@ func (r *Repository) SetupRoutes(app *fiber.App) {
 	api.Get("/get_user/:id", r.GetUserByID)
 	api.Get("/user", r.GetUser)
 	api.Post("/create_loan", r.CreateLoan)
-	api.Get("/loan_status", r.GetAllLoan)
+	api.Get("/getall_loanstatus", r.GetAllLoan)
+	api.Delete("delete_loan_stastus/:id", r.DeleteLoanStatus)
 }
 
 func main() {
